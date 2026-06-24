@@ -57,6 +57,16 @@ echo -e "\e[1;32m-> kubectl configurado para o usuário $USER\e[0m"
 until kubectl get nodes > /dev/null 2>&1; do sleep 3; done
 echo -e "\e[1;32m-> K3s pronto\e[0m"
 
+# Aguardar arquivo do token estar disponível e exibir imediatamente
+until [ -f /var/lib/rancher/k3s/server/node-token ]; do sleep 2; done
+TOKEN=$(sudo cat /var/lib/rancher/k3s/server/node-token)
+echo -e "\n\e[1;33m=================================================\e[0m"
+echo -e "\e[1;33m ANOTE ESTES DADOS AGORA PARA USAR NO DESTROYER: \e[0m"
+echo -e "\e[1;33m=================================================\e[0m"
+echo -e "MASTER_IP: \e[1;37m$MASTER_IP\e[0m"
+echo -e "TOKEN:     \e[1;37m$TOKEN\e[0m"
+echo -e "\e[1;33m=================================================\e[0m\n"
+
 # 6. Instalando Multus e Whereabouts
 echo -e "\e[1;33m[6/7] Instalando Multus CNI e Whereabouts IPAM...\e[0m"
 kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset.yml > /dev/null 2>&1
@@ -68,11 +78,20 @@ echo -e "\e[1;32m-> Multus e Whereabouts instalados\e[0m"
 # 7. Instalando o plugin vxlan-cni no path do K3s
 echo -e "\e[1;33m[7/7] Instalando plugin vxlan-cni...\e[0m"
 VXLAN_CNI_URL="https://github.com/phdata/vxlan-cni/releases/latest/download/vxlan-cni-amd64.tgz"
-wget -qO /tmp/vxlan-cni.tgz "$VXLAN_CNI_URL"
-sudo tar xzf /tmp/vxlan-cni.tgz -C /var/lib/rancher/k3s/data/cni/ 2>/dev/null || \
-  sudo tar xzf /tmp/vxlan-cni.tgz -C /opt/cni/bin/
-rm /tmp/vxlan-cni.tgz
-echo -e "\e[1;32m-> vxlan-cni instalado\e[0m"
+CNI_DIR="/var/lib/rancher/k3s/data/cni"
+
+if wget --timeout=30 --tries=2 -qO /tmp/vxlan-cni.tgz "$VXLAN_CNI_URL"; then
+  sudo mkdir -p "$CNI_DIR"
+  sudo tar xzf /tmp/vxlan-cni.tgz -C "$CNI_DIR" 2>/dev/null || \
+    sudo tar xzf /tmp/vxlan-cni.tgz -C /opt/cni/bin/
+  rm /tmp/vxlan-cni.tgz
+  echo -e "\e[1;32m-> vxlan-cni instalado em $CNI_DIR\e[0m"
+else
+  echo -e "\e[1;31m[ERRO] Falha ao baixar vxlan-cni (timeout ou arquivo nao encontrado).\e[0m"
+  echo -e "\e[1;31m       Verifique a URL: $VXLAN_CNI_URL\e[0m"
+  echo -e "\e[1;31m       Instale manualmente e re-execute run.sh.\e[0m"
+  exit 1
+fi
 
 # Abrir porta VXLAN no firewall
 sudo ufw allow 4789/udp 2>/dev/null || true
