@@ -35,7 +35,7 @@ echo -e "\e[1;32mIP do Master (Tailscale): $MASTER_IP\e[0m\n"
 
 # 4. K3s Server
 echo -e "\e[1;33m[4/6] Instalando K3s server...\e[0m"
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
+curl -4 -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
   --node-ip=${MASTER_IP} \
   --advertise-address=${MASTER_IP} \
   --flannel-iface=tailscale0 \
@@ -52,9 +52,8 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 echo -e "\e[1;33m[5/6] Instalando Helm, Multus e Whereabouts...\e[0m"
 
 if ! command -v helm &>/dev/null; then
-  # --retry 5: K3s reconfigura iptables ao subir e pode derrubar conexoes por alguns segundos
-  curl -fsSL --retry 5 --retry-delay 3 \
-    https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  # -4: forca IPv4 — K3s nao configura rotas IPv6, causando ECONNRESET em dominios que resolvem para IPv6 primeiro
+  curl -4 -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 fi
 
 # Multus via rke2-charts — paths de CNI corretos para K3s
@@ -66,14 +65,15 @@ helm upgrade --install multus rke2-charts/rke2-multus \
   --set config.binDir=/var/lib/rancher/k3s/data/cni \
   --wait --timeout=120s
 
-# Whereabouts IPAM — aloca IPs unicos cross-node via apiserver
-# Repositorio migrou para OCI registry em 2024 (helm repo add nao funciona)
-WHEREABOUTS_VERSION=$(curl -s https://api.github.com/repos/k8snetworkplumbingwg/whereabouts/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
-helm upgrade --install whereabouts \
-  oci://ghcr.io/k8snetworkplumbingwg/whereabouts-chart \
-  --version "${WHEREABOUTS_VERSION}" \
-  --namespace kube-system \
-  --wait --timeout=120s
+# Whereabouts IPAM — nao tem chart Helm, usa manifestos oficiais do repositorio
+WHEREABOUTS_VERSION=$(curl -4 -s https://api.github.com/repos/k8snetworkplumbingwg/whereabouts/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+BASE_URL="https://raw.githubusercontent.com/k8snetworkplumbingwg/whereabouts/${WHEREABOUTS_VERSION}/doc/crds"
+kubectl apply -f "${BASE_URL}/whereabouts.cni.cncf.io_ippools.yaml"
+kubectl apply -f "${BASE_URL}/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml"
+kubectl apply -f "${BASE_URL}/whereabouts.cni.cncf.io_nodeslicepools.yaml"
+kubectl apply -f "https://raw.githubusercontent.com/k8snetworkplumbingwg/whereabouts/${WHEREABOUTS_VERSION}/doc/crds/daemonset-install.yaml"
+echo -e "\e[1;33mAguardando Whereabouts ficar pronto...\e[0m"
+kubectl rollout status daemonset/whereabouts -n kube-system --timeout=120s
 
 TOKEN=$(sudo cat /var/lib/rancher/k3s/server/node-token)
 
