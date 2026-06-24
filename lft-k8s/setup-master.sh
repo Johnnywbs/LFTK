@@ -90,7 +90,8 @@ sudo ufw allow 4789/udp 2>/dev/null || true
 # Labels no nó master
 kubectl label node $(hostname) node-role=master --overwrite > /dev/null 2>&1
 
-TOKEN=$(cat /var/lib/rancher/k3s/server/node-token 2>/dev/null || sudo cat /var/lib/rancher/k3s/server/node-token)
+sudo chmod o+r /var/lib/rancher/k3s/server/node-token
+TOKEN=$(cat /var/lib/rancher/k3s/server/node-token)
 
 echo -e "\n\e[1;32m=================================================\e[0m"
 echo -e "\e[1;32m SETUP CONCLUÍDO! USE ESTES DADOS NO DESTROYER:  \e[0m"
