@@ -29,7 +29,7 @@ fi
 echo -e "\e[1;32m-> Master: $MASTER_NAME\e[0m"
 
 echo -e "\e[1;33m[PRE-CHECK] Verificando Multus...\e[0m"
-if ! kubectl get daemonset multus -n kube-system > /dev/null 2>&1; then
+if ! kubectl get daemonset kube-multus-ds -n kube-system > /dev/null 2>&1; then
   echo -e "\e[1;31m[ERRO] Multus não encontrado. Execute setup-master.sh primeiro.\e[0m"
   exit 1
 fi
@@ -47,6 +47,8 @@ echo -e "\e[1;32m-> Whereabouts OK\e[0m\n"
 echo -e "\e[1;33m[0/5] Limpando recursos de execuções anteriores...\e[0m"
 kubectl delete job lft-experiment -n lft --ignore-not-found > /dev/null 2>&1
 kubectl delete pod lft-iperf-server -n lft --ignore-not-found > /dev/null 2>&1
+# ClusterRoleBinding não permite alteração de roleRef via apply — deletar antes
+kubectl delete clusterrolebinding whereabouts --ignore-not-found > /dev/null 2>&1
 # Aguardar remoção para liberação do IP Whereabouts
 sleep 5
 echo -e "\e[1;32m-> Limpeza concluída\e[0m\n"
