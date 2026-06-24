@@ -45,16 +45,23 @@ curl -sfL https://get.k3s.io | K3S_URL="https://${MASTER_IP}:6443" K3S_TOKEN="${
   --node-ip=${WORKER_IP} \
   --flannel-iface=tailscale0 > /dev/null 2>&1
 
-# 6. Verificar plugin vxlan nativo do K3s
-echo -e "\e[1;33m[5/5] Verificando plugin vxlan nativo do K3s...\e[0m"
-# Aguardar K3s criar os diretórios
+# 6. Criar symlink do plugin macvlan no bundle do K3s
+echo -e "\e[1;33m[5/5] Habilitando plugin macvlan no K3s...\e[0m"
 sleep 5
-CNI_DIR="/var/lib/rancher/k3s/data/cni"
-if [ -f "$CNI_DIR/vxlan" ]; then
-  echo -e "\e[1;32m-> Plugin vxlan encontrado em $CNI_DIR\e[0m"
+CNI_BIN=$(readlink -f /var/lib/rancher/k3s/data/cni/bridge)
+if [ -z "$CNI_BIN" ]; then
+  echo -e "\e[1;31m[ERRO] Binário CNI do K3s não encontrado.\e[0m"
+  exit 1
+fi
+sudo ln -sf "$CNI_BIN" /var/lib/rancher/k3s/data/cni/macvlan
+echo -e "\e[1;32m-> Symlink macvlan criado -> $CNI_BIN\e[0m"
+
+# Verificar interface flannel.1
+if ip link show flannel.1 > /dev/null 2>&1; then
+  echo -e "\e[1;32m-> Interface flannel.1 encontrada — Multus usará macvlan sobre ela\e[0m"
 else
-  echo -e "\e[1;31m[ERRO] Plugin vxlan nao encontrado em $CNI_DIR\e[0m"
-  echo -e "\e[1;31m       Verifique se o K3s foi instalado corretamente.\e[0m"
+  echo -e "\e[1;31m[ERRO] Interface flannel.1 nao encontrada.\e[0m"
+  echo -e "\e[1;31m       Verifique se o K3s e o Flannel estao rodando.\e[0m"
   exit 1
 fi
 
