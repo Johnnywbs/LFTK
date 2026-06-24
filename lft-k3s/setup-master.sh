@@ -28,7 +28,7 @@ echo -e "\e[1;32m-> Autentique o Tailscale se solicitado:\e[0m"
 sudo tailscale up 2>&1
 
 echo -e "\e[1;33mAguardando Tailscale conectar...\e[0m"
-until tailscale status --json | grep -q '"BackendState":"Running"'; do sleep 2; done
+until tailscale ip -4 2>/dev/null | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; do sleep 2; done
 
 MASTER_IP=$(tailscale ip -4)
 echo -e "\e[1;32mIP do Master (Tailscale): $MASTER_IP\e[0m\n"
