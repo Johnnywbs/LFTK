@@ -1,6 +1,20 @@
 #!/bin/bash
 set -e
 
+print_credentials() {
+  TOKEN_FILE="/var/lib/rancher/k3s/server/node-token"
+  if [ -f "$TOKEN_FILE" ]; then
+    sudo chmod o+r "$TOKEN_FILE"
+    echo -e "\n\e[1;33m=================================================\e[0m"
+    echo -e "\e[1;33m USE ESTES DADOS NO DESTROYER:                   \e[0m"
+    echo -e "\e[1;33m=================================================\e[0m"
+    echo -e "MASTER_IP: \e[1;37m${MASTER_IP:-$(tailscale ip -4 2>/dev/null)}\e[0m"
+    echo -e "TOKEN:     \e[1;37m$(cat $TOKEN_FILE)\e[0m"
+    echo -e "\e[1;33m=================================================\e[0m\n"
+  fi
+}
+trap print_credentials EXIT
+
 echo -e "\e[1;34m=================================================\e[0m"
 echo -e "\e[1;34m       Iniciando Setup do Master (Lenovo)        \e[0m"
 echo -e "\e[1;34m=================================================\e[0m\n"
@@ -88,7 +102,7 @@ fi
 sudo ufw allow 4789/udp 2>/dev/null || true
 
 # Labels no nó master
-kubectl label node $(hostname) node-role=master --overwrite > /dev/null 2>&1
+NODE_NAME=$(hostname); kubectl label node ${NODE_NAME,,} node-role=master --overwrite > /dev/null 2>&1
 
 sudo chmod o+r /var/lib/rancher/k3s/server/node-token
 TOKEN=$(cat /var/lib/rancher/k3s/server/node-token)
