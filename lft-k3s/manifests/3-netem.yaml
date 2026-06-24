@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: lft-netem
+  labels:
+    app: lft-netem
+spec:
+  selector:
+    matchLabels:
+      app: lft-netem
+  template:
+    metadata:
+      labels:
+        app: lft-netem
+    spec:
+      hostNetwork: true
+      initContainers:
+      - name: apply-netem
+        image: alpine:3.19
+        command:
+        - sh
+        - -c
+        - |
+          apk add --no-cache --quiet iproute2
+          tc qdisc del dev tailscale0 root 2>/dev/null || true
+          tc qdisc add dev tailscale0 root netem delay 130ms rate 3mbit
+          echo "netem aplicado em tailscale0: delay=130ms rate=3mbit"
+        securityContext:
+          privileged: true
+      containers:
+      - name: pause
+        image: rancher/mirrored-pause:3.6
+        securityContext:
+          privileged: true
+      tolerations:
+      - operator: Exists

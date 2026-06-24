@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: lft-vxlan-setup
+  labels:
+    app: lft-vxlan-setup
+spec:
+  selector:
+    matchLabels:
+      app: lft-vxlan-setup
+  template:
+    metadata:
+      labels:
+        app: lft-vxlan-setup
+    spec:
+      hostNetwork: true
+      initContainers:
+      - name: vxlan-init
+        image: alpine:3.19
+        command:
+        - sh
+        - -c
+        - |
+          apk add --no-cache --quiet iproute2
+
+          MASTER_IP=$(cat /config/master-ip)
+          WORKER_IP=$(cat /config/worker-ip)
+          VXLAN_ID=$(cat /config/vxlan-id)
+          VXLAN_DEV=$(cat /config/vxlan-dev)
+          BRIDGE_DEV=$(cat /config/bridge-dev)
+          MTU=$(cat /config/vxlan-mtu)
+
+          MY_IP=$(ip -4 addr show tailscale0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
+
+          if [ "$MY_IP" = "$MASTER_IP" ]; then
+            PEER_IP=$WORKER_IP
+          else
+            PEER_IP=$MASTER_IP
+          fi
+
+          echo "Node IP: $MY_IP | Peer IP: $PEER_IP"
+
+          # Remove interfaces anteriores na ordem correta (porta antes da bridge)
+          ip link set $VXLAN_DEV nomaster 2>/dev/null || true
+          ip link del $VXLAN_DEV 2>/dev/null || true
+          ip link del $BRIDGE_DEV 2>/dev/null || true
+
+          ip link add $VXLAN_DEV type vxlan \
+            id $VXLAN_ID \
+            remote $PEER_IP \
+            dstport 4789 \
+            dev tailscale0
+          ip link set $VXLAN_DEV mtu $MTU
+          ip link set $VXLAN_DEV up
+
+          ip link add $BRIDGE_DEV type bridge
+          ip link set $VXLAN_DEV master $BRIDGE_DEV
+          ip link set $BRIDGE_DEV up
+
+          echo "VXLAN tunnel OK: $VXLAN_DEV -> $BRIDGE_DEV (peer: $PEER_IP)"
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: config
+          mountPath: /config
+      containers:
+      - name: pause
+        image: rancher/mirrored-pause:3.6
+        securityContext:
+          privileged: true
+      tolerations:
+      - operator: Exists
+      volumes:
+      - name: config
+        configMap:
+          name: lft-vxlan-config
