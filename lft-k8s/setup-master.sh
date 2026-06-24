@@ -65,21 +65,14 @@ kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/whereabo
 kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/whereabouts/master/doc/crds/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml > /dev/null 2>&1
 echo -e "\e[1;32m-> Multus e Whereabouts instalados\e[0m"
 
-# 7. Instalando o plugin vxlan-cni no path do K3s
-echo -e "\e[1;33m[7/7] Instalando plugin vxlan-cni...\e[0m"
-VXLAN_CNI_URL="https://github.com/phdata/vxlan-cni/releases/latest/download/vxlan-cni-amd64.tgz"
+# 7. Verificar plugin vxlan nativo do K3s
+echo -e "\e[1;33m[7/7] Verificando plugin vxlan nativo do K3s...\e[0m"
 CNI_DIR="/var/lib/rancher/k3s/data/cni"
-
-if wget --timeout=30 --tries=2 -qO /tmp/vxlan-cni.tgz "$VXLAN_CNI_URL"; then
-  sudo mkdir -p "$CNI_DIR"
-  sudo tar xzf /tmp/vxlan-cni.tgz -C "$CNI_DIR" 2>/dev/null || \
-    sudo tar xzf /tmp/vxlan-cni.tgz -C /opt/cni/bin/
-  rm /tmp/vxlan-cni.tgz
-  echo -e "\e[1;32m-> vxlan-cni instalado em $CNI_DIR\e[0m"
+if [ -f "$CNI_DIR/vxlan" ]; then
+  echo -e "\e[1;32m-> Plugin vxlan encontrado em $CNI_DIR\e[0m"
 else
-  echo -e "\e[1;31m[ERRO] Falha ao baixar vxlan-cni (timeout ou arquivo nao encontrado).\e[0m"
-  echo -e "\e[1;31m       Verifique a URL: $VXLAN_CNI_URL\e[0m"
-  echo -e "\e[1;31m       Instale manualmente e re-execute run.sh.\e[0m"
+  echo -e "\e[1;31m[ERRO] Plugin vxlan nao encontrado em $CNI_DIR\e[0m"
+  echo -e "\e[1;31m       Verifique se o K3s foi instalado corretamente.\e[0m"
   exit 1
 fi
 

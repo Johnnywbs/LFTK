@@ -7,7 +7,7 @@ spec:
   config: '{
     "cniVersion": "0.3.1",
     "name": "lft-vxlan",
-    "type": "vxlan-cni",
+    "type": "vxlan",
     "vxlanId": 100,
     "vxlanPort": 4789,
     "master": "tailscale0",

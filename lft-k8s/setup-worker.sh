@@ -45,17 +45,18 @@ curl -sfL https://get.k3s.io | K3S_URL="https://${MASTER_IP}:6443" K3S_TOKEN="${
   --node-ip=${WORKER_IP} \
   --flannel-iface=tailscale0 > /dev/null 2>&1
 
-# 6. Instalando o plugin vxlan-cni no path do K3s
-echo -e "\e[1;33m[5/5] Instalando plugin vxlan-cni...\e[0m"
+# 6. Verificar plugin vxlan nativo do K3s
+echo -e "\e[1;33m[5/5] Verificando plugin vxlan nativo do K3s...\e[0m"
 # Aguardar K3s criar os diretórios
 sleep 5
-VXLAN_CNI_URL="https://github.com/phdata/vxlan-cni/releases/latest/download/vxlan-cni-amd64.tgz"
-wget -qO /tmp/vxlan-cni.tgz "$VXLAN_CNI_URL"
-sudo mkdir -p /var/lib/rancher/k3s/data/cni
-sudo tar xzf /tmp/vxlan-cni.tgz -C /var/lib/rancher/k3s/data/cni/ 2>/dev/null || \
-  sudo tar xzf /tmp/vxlan-cni.tgz -C /opt/cni/bin/
-rm /tmp/vxlan-cni.tgz
-echo -e "\e[1;32m-> vxlan-cni instalado\e[0m"
+CNI_DIR="/var/lib/rancher/k3s/data/cni"
+if [ -f "$CNI_DIR/vxlan" ]; then
+  echo -e "\e[1;32m-> Plugin vxlan encontrado em $CNI_DIR\e[0m"
+else
+  echo -e "\e[1;31m[ERRO] Plugin vxlan nao encontrado em $CNI_DIR\e[0m"
+  echo -e "\e[1;31m       Verifique se o K3s foi instalado corretamente.\e[0m"
+  exit 1
+fi
 
 # Abrir porta VXLAN no firewall
 sudo ufw allow 4789/udp 2>/dev/null || true
