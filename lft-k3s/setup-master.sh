@@ -43,6 +43,8 @@ curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
 
 echo -e "\e[1;33mAguardando apiserver ficar pronto...\e[0m"
 until sudo k3s kubectl get nodes &>/dev/null; do sleep 2; done
+echo -e "\e[1;33mAguardando rede estabilizar...\e[0m"
+sleep 10
 
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
@@ -50,7 +52,9 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 echo -e "\e[1;33m[5/6] Instalando Helm, Multus e Whereabouts...\e[0m"
 
 if ! command -v helm &>/dev/null; then
-  curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash > /dev/null 2>&1
+  # --retry 5: K3s reconfigura iptables ao subir e pode derrubar conexoes por alguns segundos
+  curl -fsSL --retry 5 --retry-delay 3 \
+    https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 fi
 
 # Multus via rke2-charts — paths de CNI corretos para K3s
