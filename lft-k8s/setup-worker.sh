@@ -45,7 +45,19 @@ curl -sfL https://get.k3s.io | K3S_URL="https://${MASTER_IP}:6443" K3S_TOKEN="${
   --node-ip=${WORKER_IP} \
   --flannel-iface=tailscale0 > /dev/null 2>&1
 
-# 6. Criar symlink do plugin macvlan no bundle do K3s
+# 6. Criar symlink do diretório CNI do K3s para o path padrão esperado pelo Multus
+echo -e "\e[1;33m[5/5a] Criando symlink do CNI config do K3s para /etc/cni/net.d...\e[0m"
+sudo mkdir -p /etc/cni/net.d
+K3S_CNI_DIR="/var/lib/rancher/k3s/agent/etc/cni/net.d"
+until [ -d "$K3S_CNI_DIR" ] && ls "$K3S_CNI_DIR"/*.conflist > /dev/null 2>&1; do
+  sleep 2
+done
+for f in "$K3S_CNI_DIR"/*; do
+  sudo ln -sf "$f" /etc/cni/net.d/$(basename "$f") 2>/dev/null || true
+done
+echo -e "\e[1;32m-> Symlinks criados de $K3S_CNI_DIR para /etc/cni/net.d\e[0m"
+
+# Criar symlink do plugin macvlan no bundle do K3s
 echo -e "\e[1;33m[5/5] Habilitando plugin macvlan no K3s...\e[0m"
 sleep 5
 CNI_BIN=$(readlink -f /var/lib/rancher/k3s/data/cni/bridge)
