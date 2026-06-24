@@ -22,7 +22,11 @@ if ! command -v tailscale &>/dev/null; then
   curl -fsSL https://tailscale.com/install.sh | sh
 fi
 echo -e "\e[1;32m-> Autentique o Tailscale se solicitado:\e[0m"
-sudo tailscale up
+# 2>&1 garante que o link de autenticacao aparece no terminal (vem no stderr)
+sudo tailscale up 2>&1
+
+echo -e "\e[1;33mAguardando Tailscale conectar...\e[0m"
+until tailscale status --json | grep -q '"BackendState":"Running"'; do sleep 2; done
 
 WORKER_IP=$(tailscale ip -4)
 echo -e "\e[1;32mIP do Worker (Tailscale): $WORKER_IP\e[0m\n"
