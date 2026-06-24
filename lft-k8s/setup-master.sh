@@ -60,7 +60,9 @@ echo -e "\e[1;32m-> K3s pronto\e[0m"
 # 6. Instalando Multus e Whereabouts
 echo -e "\e[1;33m[6/7] Instalando Multus CNI e Whereabouts IPAM...\e[0m"
 kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset.yml > /dev/null 2>&1
-kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/whereabouts/master/doc/daemonset-install.yaml > /dev/null 2>&1
+kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/whereabouts/master/doc/crds/daemonset-install.yaml > /dev/null 2>&1
+kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/whereabouts/master/doc/crds/whereabouts.cni.cncf.io_ippools.yaml > /dev/null 2>&1
+kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/whereabouts/master/doc/crds/whereabouts.cni.cncf.io_overlappingrangeipreservations.yaml > /dev/null 2>&1
 echo -e "\e[1;32m-> Multus e Whereabouts instalados\e[0m"
 
 # 7. Instalando o plugin vxlan-cni no path do K3s
