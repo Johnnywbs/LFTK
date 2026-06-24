@@ -57,16 +57,6 @@ echo -e "\e[1;32m-> kubectl configurado para o usuário $USER\e[0m"
 until kubectl get nodes > /dev/null 2>&1; do sleep 3; done
 echo -e "\e[1;32m-> K3s pronto\e[0m"
 
-# Aguardar arquivo do token estar disponível e exibir imediatamente
-until [ -f /var/lib/rancher/k3s/server/node-token ]; do sleep 2; done
-TOKEN=$(sudo cat /var/lib/rancher/k3s/server/node-token)
-echo -e "\n\e[1;33m=================================================\e[0m"
-echo -e "\e[1;33m ANOTE ESTES DADOS AGORA PARA USAR NO DESTROYER: \e[0m"
-echo -e "\e[1;33m=================================================\e[0m"
-echo -e "MASTER_IP: \e[1;37m$MASTER_IP\e[0m"
-echo -e "TOKEN:     \e[1;37m$TOKEN\e[0m"
-echo -e "\e[1;33m=================================================\e[0m\n"
-
 # 6. Instalando Multus e Whereabouts
 echo -e "\e[1;33m[6/7] Instalando Multus CNI e Whereabouts IPAM...\e[0m"
 kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset.yml > /dev/null 2>&1
@@ -99,14 +89,13 @@ sudo ufw allow 4789/udp 2>/dev/null || true
 # Labels no nó master
 kubectl label node $(hostname) node-role=master --overwrite > /dev/null 2>&1
 
-# Capturando credenciais
-TOKEN=$(sudo cat /var/lib/rancher/k3s/server/node-token)
+TOKEN=$(cat /var/lib/rancher/k3s/server/node-token 2>/dev/null || sudo cat /var/lib/rancher/k3s/server/node-token)
 
 echo -e "\n\e[1;32m=================================================\e[0m"
 echo -e "\e[1;32m SETUP CONCLUÍDO! USE ESTES DADOS NO DESTROYER:  \e[0m"
 echo -e "\e[1;32m=================================================\e[0m"
 echo -e "MASTER_IP: \e[1;37m$MASTER_IP\e[0m"
-echo -e "TOKEN: \e[1;37m$TOKEN\e[0m"
+echo -e "TOKEN:     \e[1;37m$TOKEN\e[0m"
 echo -e "\e[1;32m=================================================\e[0m"
 echo -e "\n\e[1;33mPróximos passos:\e[0m"
 echo -e "1. Execute setup-worker.sh no notebook Destroyer"
