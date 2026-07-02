@@ -1,0 +1,12 @@
+# Standalone dependencies for the K3s migration PoC (lft/k8s_lft).
+#
+# Deliberately NOT part of lft/setup.py's install_requires: k8s_lft is a
+# research PoC that validates abstractions for a *future* LFT
+# implementation, it is not a dependency of the real profissa_lft package.
+# Install with: pip install -r k8s_lft/requirements.txt
+kubernetes
+statsmodels
+pandas
+scipy
+numpy
+paramiko
